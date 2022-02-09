@@ -20,23 +20,27 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.9.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
-<meta property="og:type" content="website">
-<meta property="og:title" content="Life is Experience">
-<meta property="og:url" content="http://example.com/index.html">
+<meta name="description" content="背景通常我们hook布局解析有几种方式。  通过asm插桩的方式。代码中一般会写LayoutInflater.from(Context).inflate(@LayoutRes int resource, @Nullable ViewGroup root)。通过asm hook该处，调用我们预定义的代码，然后就可以拿到view做一些想做的事情； 利用LayoutInflater中两个成员变量mFac">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LayoutInflater Factory使用">
+<meta property="og:url" content="http://example.com/2022/02/09/LayoutInflater_factory%E4%BD%BF%E7%94%A8/index.html">
 <meta property="og:site_name" content="Life is Experience">
+<meta property="og:description" content="背景通常我们hook布局解析有几种方式。  通过asm插桩的方式。代码中一般会写LayoutInflater.from(Context).inflate(@LayoutRes int resource, @Nullable ViewGroup root)。通过asm hook该处，调用我们预定义的代码，然后就可以拿到view做一些想做的事情； 利用LayoutInflater中两个成员变量mFac">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-02-09T03:18:21.480Z">
+<meta property="article:modified_time" content="2022-02-09T07:58:46.422Z">
 <meta property="article:author" content="子墨">
 <meta name="twitter:card" content="summary">
 
 
-<link rel="canonical" href="http://example.com/">
+<link rel="canonical" href="http://example.com/2022/02/09/LayoutInflater_factory%E4%BD%BF%E7%94%A8/">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":true,"isPost":false,"lang":"zh-CN","comments":"","permalink":"","path":"index.html","title":""}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2022/02/09/LayoutInflater_factory%E4%BD%BF%E7%94%A8/","path":"2022/02/09/LayoutInflater_factory使用/","title":"LayoutInflater Factory使用"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>Life is Experience</title>
+<title>LayoutInflater Factory使用 | Life is Experience</title>
   
 
 
@@ -62,7 +66,7 @@
 
     <a href="/" class="brand" rel="start">
       <i class="logo-line"></i>
-      <h1 class="site-title">Life is Experience</h1>
+      <p class="site-title">Life is Experience</p>
       <i class="logo-line"></i>
     </a>
       <p class="site-subtitle" itemprop="description">you always fell regret for the things you should have done, but didn't.</p>
@@ -91,7 +95,7 @@
 
   <aside class="sidebar">
 
-    <div class="sidebar-inner sidebar-overview-active">
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
       <ul class="sidebar-nav">
         <li class="sidebar-nav-toc">
           文章目录
@@ -104,6 +108,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LayoutInflater-inflate%E6%96%B9%E6%B3%95%E5%AE%9E%E7%8E%B0%E9%80%BB%E8%BE%91"><span class="nav-number">2.</span> <span class="nav-text">LayoutInflater inflate方法实现逻辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AppCompatActivity%E5%92%8CLayoutInflater%E7%9A%84%E4%B8%A4%E4%B8%AAFactory"><span class="nav-number">3.</span> <span class="nav-text">AppCompatActivity和LayoutInflater的两个Factory</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%A4%E4%B8%AAFactory%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">3.1.</span> <span class="nav-text">两个Factory的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#installViewFactory%E8%AE%BE%E7%BD%AEFactory"><span class="nav-number">3.2.</span> <span class="nav-text">installViewFactory设置Factory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AppCompatActivity%E6%9B%BF%E6%8D%A2%E7%9A%84Factory%E6%89%A7%E8%A1%8C%E9%80%BB%E8%BE%91"><span class="nav-number">3.3.</span> <span class="nav-text">AppCompatActivity替换的Factory执行逻辑</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#demo"><span class="nav-number">4.</span> <span class="nav-text">demo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -145,16 +150,17 @@
 </noscript>
 
 
-    <div class="main-inner index posts-expand">
+    <div class="main-inner post posts-expand">
 
-    
+
+  
 
 
 <div class="post-block">
   
   
 
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/02/09/LayoutInflater_factory%E4%BD%BF%E7%94%A8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -167,9 +173,9 @@
       <meta itemprop="name" content="Life is Experience">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/02/09/LayoutInflater_factory%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">LayoutInflater Factory使用</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          LayoutInflater Factory使用
+        </h1>
 
         <div class="post-meta-container">
           <div class="post-meta">
@@ -193,7 +199,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>通常我们hook布局解析有几种方式。</p>
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>通常我们hook布局解析有几种方式。</p>
 <ol>
 <li>通过asm插桩的方式。代码中一般会写<code>LayoutInflater.from(Context).inflate(@LayoutRes int resource, @Nullable ViewGroup root)</code>。通过asm hook该处，调用我们预定义的代码，然后就可以拿到view做一些想做的事情；</li>
 <li>利用LayoutInflater中两个成员变量mFactory和mFactory2实例。其实AppCompatActivity就是这么做的。AppCompatActivity是为了实现TextView替换为AppCompatTextView实现一些TextView没有的效果，那么我们也可以利用LayoutInflater的factory实现我们想要的一些功能。</li>
@@ -242,7 +248,6 @@
 <li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/9a0cc0a5649c">https://www.jianshu.com/p/9a0cc0a5649c</a></li>
 </ol>
 
-      
     </div>
 
     
@@ -250,318 +255,22 @@
     
 
     <footer class="post-footer">
-        <div class="post-eof"></div>
-      
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/01/25/Handler%E7%9A%84epoll%E6%9C%BA%E5%88%B6/" rel="prev" title="Handler的epoll机制">
+                  <i class="fa fa-chevron-left"></i> Handler的epoll机制
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
     </footer>
   </article>
 </div>
 
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/01/25/Handler%E7%9A%84epoll%E6%9C%BA%E5%88%B6/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="子墨">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Life is Experience">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/01/25/Handler%E7%9A%84epoll%E6%9C%BA%E5%88%B6/" class="post-title-link" itemprop="url">Handler的epoll机制</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-      
-
-      <time title="创建时间：2022-01-25 22:51:49 / 修改时间：23:29:28" itemprop="dateCreated datePublished" datetime="2022-01-25T22:51:49+08:00">2022-01-25</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/01/23/%E5%AF%92%E7%AA%91%E8%B5%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="子墨">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Life is Experience">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/01/23/%E5%AF%92%E7%AA%91%E8%B5%8B/" class="post-title-link" itemprop="url">寒窑赋</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2022-01-23 16:54:10" itemprop="dateCreated datePublished" datetime="2022-01-23T16:54:10+08:00">2022-01-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-01-25 23:43:06" itemprop="dateModified" datetime="2022-01-25T23:43:06+08:00">2022-01-25</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="【原文】"><a href="#【原文】" class="headerlink" title="【原文】"></a>【原文】</h2><p>天有不测风云，人有旦夕祸福。蜈蚣百足，行不及蛇；雄鸡两翼，飞不过鸦。马有千里之程，无骑不能自往；人有冲天之志，非运不能自通。</p>
-<p>盖闻：人生在世，富贵不能淫，贫贱不能移。文章盖世，孔子厄于陈邦；武略超群，太公钓于渭水。颜渊命短，殊非凶恶之徒；盗跖年长，岂是善良之辈。尧帝明圣，却生不肖之儿；瞽叟愚顽，反生大孝之子。张良原是布衣，萧何称谓县吏。晏子身无五尺，封作齐国宰相；孔明卧居草庐，能作蜀汉军师。楚霸虽雄，败于乌江自刎；汉王虽弱，竟有万里江山。李广有射虎之威，到老无封；冯唐有乘龙之才，一生不遇。韩信未遇之时，无一日三餐，及至遇行，腰悬三齐玉印，一旦时衰，死于阴人之手。</p>
-<p>有先贫而后富，有老壮而少衰。满腹文章，白发竟然不中；才疏学浅，少年及第登科。深院宫娥，运退反为妓妾；风流妓女，时来配作夫人。</p>
-<p>青春美女，却招愚蠢之夫；俊秀郎君，反配粗丑之妇。蛟龙未遇，潜水于鱼鳖之间；君子失时，拱手于小人之下。衣服虽破，常存仪礼之容；面带忧愁，每抱怀安之量。时遭不遇，只宜安贫守份；心若不欺，必然扬眉吐气。初贫君子，天然骨骼生成；乍富小人，不脱贫寒肌体。</p>
-<p>天不得时，日月无光；地不得时，草木不生；水不得时，风浪不平；人不得时，利运不通。注福注禄，命里已安排定，富贵谁不欲？人若不依根基八字，岂能为卿为相？</p>
-<p>余者，居洛阳之时，朝投僧寺，夜宿破窑。布衣不能遮其体，饘粥不能充其饥。上人嫌，下人憎，皆言余之贱也，余曰：非贱也，乃时也，运也，命也。余后登高及第，入中书，官至极品，位列三公，思衣则有绮罗千箱，思食则有百味珍馐，有挞百僚之杖，有斩佞臣之剑，出则壮士执鞭，入则佳人扶袂，廪有余粟，库有余财，人皆言余之贵也，余曰：非贵也，乃时也，运也，命也。</p>
-<p>嗟呼！人生在世，富贵不可尽用，贫贱不可自欺，听由天地循环，周而复始焉。</p>
-<h2 id="【译文】"><a href="#【译文】" class="headerlink" title="【译文】"></a>【译文】</h2><p>天上有预测不到的风和云，人也会有早晚遇到的灾祸与喜事。蜈蚣有上百只足，但却不如蛇行走得好。家鸡翅膀虽然很大，却不能像鸟一样飞行。马虽然能行走千里之遥，但没有人驾驭也不能自己到达目的地。人有远大的理想，但缺乏机遇就不能实现。</p>
-<p>人们常说：人生在世，富贵不能淫，贫贱不能移。孔子的文章写得超过世人却被围困于陈国。拥有文韬武略的姜子牙也曾在渭水垂钓等待机会。孔子的学生颜回虽然早亡，但绝非凶恶的人。盗跖虽然活得长，却不是善良人。尧、舜虽然英明，却生下不肖的儿子。舜的父亲瞽叟顽固愚蠢，反而生下舜这样的大孝子。张良原来只是普通百姓，萧何也只是县吏。晏子的身高不到五尺，却被封为齐国宰相。孔明居住在茅草屋里，却能担当蜀国的军师。项羽虽然强大，却兵败而自刎乌江；刘邦虽然弱小，最终取得了国家政权。汉将李广虽有射虎石的威名，却终身都未获得封侯。冯唐虽有治国安邦的才能，却一生怀才不遇。韩信时运不济时，连饭都吃不上，等到运气来了，成为掌印的大将军，而一旦运气衰败，又死于阴毒人的计谋。</p>
-<p>有的人先富裕后贫穷，也有人老年富裕少年衰落。满腹锦绣文章，直到老年还没有考上功名；才疏学浅的人，可能很年轻就金榜提名。皇帝的妃娥在动乱中可能沦为妾妓，风流的妓女，时来运转也能做贵夫人。青春美丽的嫂子嫁了愚蠢的丈夫，俊秀的青年倒找了丑陋的嫂子。蛟龙没有机遇，只能藏身于鱼鳖之间，君子没有机会时，只能屈从于小人。衣服虽然破旧，常保持恭敬礼仪，面带忧愁却可能怀有兼济天下的志向。不得志时，只能安于贫穷和本分，心中坦荡一定会有扬眉吐气的一天。君子贫寒也有一身傲骨，暴富的小人脱不了内心的贫寒。</p>
-<p>天气不好时，就见不到太阳和月亮的光辉；土地没有合适的气候条件时，草木都不会生长。水得不到恰当的环境时，就会掀起疾风巨浪；人若得不到机遇时，好运就不畅通。富贵荣华命中都有安排，谁不想要呢？人如果没有依从八德而生活，哪里能做高官当宰相？</p>
-<p>以前，我在洛阳，白天到寺庙里吃斋饭，晚上住在寒冷的窑洞里。所穿衣服不能避寒，吃的粥饭抵御不了饥饿。上等人憎恨我，下等人讨厌我，都说我卑贱，是我没有机遇啊。现在我入朝为官，官职做到最高层，地位达到三公，地位只在皇帝一人之下，千万人之上，拥有管理百官的权利，有惩罚卑鄙悭吝官员的权力。穿衣服是绫罗锦缎，吃的则是山珍海味，出门有武士保护，回家有仆人侍奉，皇上宠爱我，百官拥戴我，所有的人说我尊贵，不是我真有多大本领，这是我得到天时和命运的眷顾啊。</p>
-<p>所以人活在世上，居富贵不能尽情享用，处贫贱也不要自暴自弃，听从天地的循环和周而复始吧！</p>
-<h2 id="《寒窑赋》读后感"><a href="#《寒窑赋》读后感" class="headerlink" title="《寒窑赋》读后感"></a><a target="_blank" rel="noopener" href="https://m.duhougan.cn/hanyaofu.html">《寒窑赋》读后感</a></h2><p>时间：2020/10/6 22:23:00<br>盖闻：千古四大奇文居其首者，《寒窑赋》也。其名又二，《破窑赋》、《劝世章》。乃北宋丁丑科状元宰相吕蒙正所作。然《宋史》、《古文观止》未收录其中以遗后世，吾心甚憾之。作此拙见，以勉己身。</p>
-<p>当是时，真宗年少，为东宫。狂傲不羁，不喜文业功名。先生值太子师，推己及人，谏太子以谦和谨慎，好学业。是以作此千古奇文，读之朗朗上口。其状物明理之精、之深，真乃千古无出其二者也。</p>
-<p>先生文中言者：大成至圣先师，教化万民，困于陈邦；昭烈武成王，武定大周，钓于渭水；年长盗跖之贼比于短折颜回之善、圣明尧舜之不孝之子比于愚顽瞽叟之大孝之子，皆叹运之过也。布衣张良、小吏萧何，君子得时，官居极品，位及人臣。五尺晏子、村夫孔明、三杰韩信、泗水刘邦，或帝、或相。冯唐易老，岁终而不得志；李广难封，卒尔为将；霸王扛鼎，败于乌江。</p>
-<p>少年及第登科，非少者满腹经纶；白发老而不中，非老者才疏学浅；天子婢女，运退为烟柳之客；千人娼客，运转为名门拙荆，盖人各有命尔。潜龙在渊，混迹于鱼虾河泽；九五隐野，行走于布衣陇亩。日月无光，乃天地不得时；风浪不平，乃舟楫不得时。及人耳，为卿为相，岂可得乎？</p>
-<p>先生昔居洛阳，家徒四壁，卑不足道。衣无华裳锦服，住无豪府广厦，食无精羮细脍，无良师益友之属授业解惑，礼尚往来。先生叹曰：“非吾贱也，乃时也运也命也。”</p>
-<p>及尔登科及第，纵横朝堂，位及人臣。思衣有绫罗绸缎，思住有良田美宅，思食有珍馐百味。上宠下用，一时风光无两，门庭若市。先生再叹曰：“非吾贵也，乃时也运也命也。” 天时、地利、人和，缺一不可。然谋事在人，行事亦在人尔。</p>
-<p>先生以“天地循环。周而复始“为文末，是以托道法自然之名而言常怀鸿鹄之志哉。</p>
-<p>乙未年春，余叔父观吾荒于学业，述之以惊梦。振聋发聩，如醍醐灌顶：秋闱将近，小子狂傲，文无安邦定国之大策，武无探囊三军之大勇，黄粱美梦，南柯太守尔。视秋闱于无物。及尔悬崖勒马，浪子回头，南柯梦醒。知耻而后勇，知弱而后学。寒窗三载，苦读不坠。幸而丙申季夏，恬为万千亚元者一。现今忆及，言犹在耳，尚羞愧乎！</p>
-<p>人依根基八字，注福注禄。然后天戮力，可改天干、可更地支、可为卿为相。是以学为终生大事者也，黄发垂髫，学之于下庠上庠。寒窗十载，常伴圣贤书，济世策。头悬梁，锥刺股，只待一朝题名金榜，效古贤人之志：文能定国，武能安邦，垂拱而天下治，固所愿也！</p>
-<p>嗟乎，凡一千余言，皆勉励直言：但请诸君常怀鸿鹄之志哉。青衣翼张，纵横无相。愿与诸君共勉尔！</p>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/01/01/%E7%BB%84%E4%BB%B6%E5%8C%96%E9%80%9A%E4%BF%A1%E6%96%B9%E6%A1%88/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="子墨">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Life is Experience">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/01/01/%E7%BB%84%E4%BB%B6%E5%8C%96%E9%80%9A%E4%BF%A1%E6%96%B9%E6%A1%88/" class="post-title-link" itemprop="url">组件化通信方案</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2022-01-01 01:48:11" itemprop="dateCreated datePublished" datetime="2022-01-01T01:48:11+08:00">2022-01-01</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-01-25 23:29:28" itemprop="dateModified" datetime="2022-01-25T23:29:28+08:00">2022-01-25</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/01/01/2021%E5%B0%8F%E7%BB%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="子墨">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Life is Experience">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/01/01/2021%E5%B0%8F%E7%BB%93/" class="post-title-link" itemprop="url">记录下我的2021</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2022-01-01 01:44:22" itemprop="dateCreated datePublished" datetime="2022-01-01T01:44:22+08:00">2022-01-01</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-07 14:05:12" itemprop="dateModified" datetime="2022-02-07T14:05:12+08:00">2022-02-07</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>很久没有动笔了，自己表达能力也一般，不太愿意围绕一篇文章不停的修改。写文章也是为了监督自己，同时也是对之前学习的一个巩固作用，其效果不言而喻。看到很多人的年终总结，自己也不由地想提起笔，写一篇属于自己的年终总结。</p>
-<h2 id="坎坷的一年"><a href="#坎坷的一年" class="headerlink" title="坎坷的一年"></a>坎坷的一年</h2><p>2021实在是经历太多，有点超出自己的想象。先是从自己熟悉的主APP业务出来，开始做一块全新的视频业务，对自己来说有着不一样的挑战；期间经历过兴奋、压力、沮丧。而后，来到了架构组，感到了关心、绝望、放弃；人们常说，三十而立，现在的我正处于人生的十字路口，健康、家庭、工作缺一不可，真正感受到肩负家庭重担的责任感、无力感，但却依然要充满希望，不管是为了孩子、还是为了自己没在这个世上白走一回。</p>
-<h2 id="年底找工作的一些感受"><a href="#年底找工作的一些感受" class="headerlink" title="年底找工作的一些感受"></a>年底找工作的一些感受</h2><p>年底尝试找了几次工作，基本都能挺到二面，然后就挂了。原因的话，猜测对一些小公司可能感觉留不住人吧(有点自恋了)；对于一些大公司的话，每次二面下来的一个感受就是，如果我是面试官，感觉你这候选人能力不是特别的有亮点啊。java基础、多线程、android基础弄得再好是应该的，项目经验有点缺了。所以说在自己做一些项目的时候一定不能一股脑先做，就和算法面试一样，得先理清思路，再动手，这是我最大的一个缺点吧。</p>
-<h2 id="展望下未来"><a href="#展望下未来" class="headerlink" title="展望下未来"></a>展望下未来</h2><p>坎坷的一年，也总算是过来了。明年应该还是比较难熬的一年，但是无论如何也要达成心中的目标，希望明年年终总结的时候，不至于太过遗憾。<br>工作方面围绕架构这块，希望能一直深耕以下几点吧。</p>
-<ol>
-<li>播放器；</li>
-<li>启动优化；</li>
-<li>OOM优化；</li>
-<li>。。。</li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
 
 
 
